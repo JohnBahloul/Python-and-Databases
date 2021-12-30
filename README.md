@@ -1,8 +1,11 @@
 # Python-and-Databases
-Leverage Python and other open sources tools to create and manage databases
-
+Leverage Python and other open sources tools to create and manage databases.
+We will explore using Google Sheets as a database alternative for small scale data storage.
+Google Cloud SQL can be used for larger scale data storage and management.
 
 <img width="245" alt="Screen Shot 2021-12-30 at 11 05 02 AM" src="https://user-images.githubusercontent.com/38549059/147781299-e50b7b4f-380c-4cd5-bacb-3fea4bf73272.png"> <img width="140" alt="Screen Shot 2021-12-30 at 11 05 19 AM" src="https://user-images.githubusercontent.com/38549059/147781301-c569074e-a26f-41ff-b497-cc48fede4cef.png">
+
+
 
 
 # Import and Process Data
