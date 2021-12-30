@@ -39,7 +39,6 @@ for f in csv_files:
 # Preview First Data Frame
 display(df_list[0].head())
 print(df_list[0].info())
-print(df_list[0].describe())
 ```
 
 
@@ -204,35 +203,6 @@ print(df_list[0].describe())
     dtypes: float64(12), int64(1), object(3)
     memory usage: 26.2+ KB
     None
-             Population    TotalCases     NewCases    TotalDeaths   NewDeaths  \
-    count  2.080000e+02  2.090000e+02     4.000000     188.000000    3.000000   
-    mean   3.041549e+07  9.171850e+04  1980.500000    3792.590426  300.000000   
-    std    1.047661e+08  4.325867e+05  3129.611424   15487.184877  451.199512   
-    min    8.010000e+02  1.000000e+01    20.000000       1.000000    1.000000   
-    25%    9.663140e+05  7.120000e+02    27.500000      22.000000   40.500000   
-    50%    7.041972e+06  4.491000e+03   656.000000     113.000000   80.000000   
-    75%    2.575614e+07  3.689600e+04  2609.000000     786.000000  449.500000   
-    max    1.381345e+09  5.032179e+06  6590.000000  162804.000000  819.000000   
-    
-           TotalRecovered  NewRecovered   ActiveCases  Serious,Critical  \
-    count    2.050000e+02      3.000000  2.050000e+02        122.000000   
-    mean     5.887898e+04   1706.000000  2.766433e+04        534.393443   
-    std      2.566984e+05   2154.779803  1.746327e+05       2047.518613   
-    min      7.000000e+00     42.000000  0.000000e+00          1.000000   
-    25%      3.340000e+02    489.000000  8.600000e+01          3.250000   
-    50%      2.178000e+03    936.000000  8.990000e+02         27.500000   
-    75%      2.055300e+04   2538.000000  7.124000e+03        160.250000   
-    max      2.576668e+06   4140.000000  2.292707e+06      18296.000000   
-    
-           Tot Cases/1M pop  Deaths/1M pop    TotalTests   Tests/1M pop  
-    count        208.000000     187.000000  1.910000e+02     191.000000  
-    mean        3196.024038      98.681176  1.402405e+06   83959.366492  
-    std         5191.986457     174.956862  5.553367e+06  152730.591240  
-    min            3.000000       0.080000  6.100000e+01       4.000000  
-    25%          282.000000       6.000000  2.575200e+04    8956.500000  
-    50%         1015.000000      29.000000  1.357020e+05   32585.000000  
-    75%         3841.750000      98.000000  7.576960e+05   92154.500000  
-    max        39922.000000    1238.000000  6.313960e+07  995282.000000  
 
 
 # Create Googlesheet Database
@@ -255,7 +225,7 @@ scope = ["https://spreadsheets.google.com/feeds",
          "https://www.googleapis.com/auth/drive.file",
          "https://www.googleapis.com/auth/drive"]
 
-credentials = ServiceAccountCredentials.from_json_keyfile_name('/Users/johnbahloul/Desktop/Data_Projects/creds.json', scope)
+credentials = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
 
 client = gspread.authorize(credentials)
 ```
@@ -282,7 +252,7 @@ except Exception as e:
 sh = client.open('CovidDatabase')
 
 # Share spreadsheet
-sh.share('johnbahloul.i@gmail.com', perm_type='user', role='owner')
+sh.share('email', perm_type='user', role='owner')
 ```
 
 
@@ -334,17 +304,18 @@ The MySQL Database is created using the Google Cloud Console.
 
 
 ```python
+# Connect to the database over a protected Network
 import mysql.connector
 from mysql.connector.constants import ClientFlag
 
 config = {
     'user': 'root',
-    'password': 'JbahJbah_1995_1995',
-    'host': '35.226.129.49',
+    'password': '',
+    'host': '',
     'client_flags': [ClientFlag.SSL],
-    'ssl_ca': '/Users/johnbahloul/Desktop/Data_Projects/server-ca.pem',
-    'ssl_cert': '/Users/johnbahloul/Desktop/Data_Projects/client-cert.pem',
-    'ssl_key': '/Users/johnbahloul/Desktop/Data_Projects/client-key.pem'
+    'ssl_ca': '',
+    'ssl_cert': '',
+    'ssl_key': ''
 }
 ```
 
@@ -374,9 +345,10 @@ cursor.execute('CREATE DATABASE coviddb')
 
 
 ```python
+# add csv files as tables to the google cloud MySQL DB
 import pymysql
 from sqlalchemy import create_engine
-engine = create_engine('mysql+pymysql://root:JbahJbah_1995_1995@35.226.129.49/coviddb', echo=False)
+engine = create_engine('')
 engine.connect()
 
 # Create 
@@ -412,26 +384,54 @@ cursor.execute('USE coviddb')
 
 
 ```python
-cursor.execute('show tables;')
-cursor.fetchall()
+from sqlalchemy.orm import Query
+from sqlalchemy.engine import reflection
+from sqlalchemy import inspect
+import sqlalchemy as db
+import warnings
+warnings.filterwarnings('ignore')
+```
+
+
+```python
+insp = reflection.Inspector.from_engine(engine)
+```
+
+
+```python
+insp.get_schema_names()
 ```
 
 
 
 
-    [('country_wise_latest',),
-     ('covid_19_clean_complete',),
-     ('day_wise',),
-     ('full_grouped',),
-     ('usa_county_wise',),
-     ('worldometer_data',)]
+    ['information_schema', 'coviddb', 'mysql', 'performance_schema', 'sys']
 
 
 
 
 ```python
-cursor.execute('describe country_wise_latest;')
-pd.DataFrame(cursor.fetchall())
+tables = insp.get_table_names(schema = 'coviddb')
+tables
+```
+
+
+
+
+    ['country_wise_latest',
+     'covid_19_clean_complete',
+     'day_wise',
+     'full_grouped',
+     'usa_county_wise',
+     'worldometer_data']
+
+
+
+
+```python
+# Get column information
+columns = insp.get_columns(table_name='worldometer_data',schema = 'coviddb')
+pd.DataFrame(columns)
 ```
 
 
@@ -455,149 +455,158 @@ pd.DataFrame(cursor.fetchall())
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>0</th>
-      <th>1</th>
-      <th>2</th>
-      <th>3</th>
-      <th>4</th>
-      <th>5</th>
+      <th>name</th>
+      <th>type</th>
+      <th>default</th>
+      <th>comment</th>
+      <th>nullable</th>
+      <th>autoincrement</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
       <td>Country/Region</td>
-      <td>text</td>
-      <td>YES</td>
-      <td></td>
+      <td>TEXT</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>Confirmed</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>Continent</td>
+      <td>TEXT</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>Deaths</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>Population</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>Recovered</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>TotalCases</td>
+      <td>BIGINT</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>False</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>Active</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>NewCases</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>5</th>
-      <td>New cases</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>TotalDeaths</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>6</th>
-      <td>New deaths</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>NewDeaths</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>7</th>
-      <td>New recovered</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>TotalRecovered</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>8</th>
-      <td>Deaths / 100 Cases</td>
-      <td>double</td>
-      <td>YES</td>
-      <td></td>
+      <td>NewRecovered</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>9</th>
-      <td>Recovered / 100 Cases</td>
-      <td>double</td>
-      <td>YES</td>
-      <td></td>
+      <td>ActiveCases</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>10</th>
-      <td>Deaths / 100 Recovered</td>
-      <td>double</td>
-      <td>YES</td>
-      <td></td>
+      <td>Serious,Critical</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>11</th>
-      <td>Confirmed last week</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>Tot Cases/1M pop</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>12</th>
-      <td>1 week change</td>
-      <td>bigint(20)</td>
-      <td>YES</td>
-      <td></td>
+      <td>Deaths/1M pop</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>13</th>
-      <td>1 week % increase</td>
-      <td>double</td>
-      <td>YES</td>
-      <td></td>
+      <td>TotalTests</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
     <tr>
       <th>14</th>
-      <td>WHO Region</td>
-      <td>text</td>
-      <td>YES</td>
-      <td></td>
+      <td>Tests/1M pop</td>
+      <td>DOUBLE</td>
       <td>None</td>
-      <td></td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>WHO Region</td>
+      <td>TEXT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>True</td>
+      <td>NaN</td>
     </tr>
   </tbody>
 </table>
@@ -607,8 +616,29 @@ pd.DataFrame(cursor.fetchall())
 
 
 ```python
-cursor.execute('select * from country_wise_latest limit 10;')
-pd.DataFrame(cursor.fetchall())
+connection = engine.connect()
+metadata = db.MetaData(schema='coviddb')
+
+# Define the Tables you want to Query
+worldometer_data = db.Table('worldometer_data', metadata, autoload=True, autoload_with=engine)
+```
+
+
+```python
+#Equivalent to 'SELECT * ...'
+query = db.select([worldometer_data]).limit(10)
+
+ResultProxy = connection.execute(query)
+ResultSet = ResultProxy.fetchall()
+
+# Create pandas dataframe
+df = pd.DataFrame(ResultSet)
+df.columns = ResultSet[0].keys()
+```
+
+
+```python
+df
 ```
 
 
@@ -632,202 +662,213 @@ pd.DataFrame(cursor.fetchall())
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>0</th>
-      <th>1</th>
-      <th>2</th>
-      <th>3</th>
-      <th>4</th>
-      <th>5</th>
-      <th>6</th>
-      <th>7</th>
-      <th>8</th>
-      <th>9</th>
-      <th>10</th>
-      <th>11</th>
-      <th>12</th>
-      <th>13</th>
-      <th>14</th>
+      <th>Country/Region</th>
+      <th>Continent</th>
+      <th>Population</th>
+      <th>TotalCases</th>
+      <th>NewCases</th>
+      <th>TotalDeaths</th>
+      <th>NewDeaths</th>
+      <th>TotalRecovered</th>
+      <th>NewRecovered</th>
+      <th>ActiveCases</th>
+      <th>Serious,Critical</th>
+      <th>Tot Cases/1M pop</th>
+      <th>Deaths/1M pop</th>
+      <th>TotalTests</th>
+      <th>Tests/1M pop</th>
+      <th>WHO Region</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>Afghanistan</td>
-      <td>36263</td>
-      <td>1269</td>
-      <td>25198</td>
-      <td>9796</td>
-      <td>106</td>
-      <td>10</td>
-      <td>18</td>
-      <td>3.50</td>
-      <td>69.49</td>
-      <td>5.04</td>
-      <td>35526</td>
-      <td>737</td>
-      <td>2.07</td>
-      <td>Eastern Mediterranean</td>
+      <td>USA</td>
+      <td>North America</td>
+      <td>331198130.0000000000</td>
+      <td>5032179</td>
+      <td>None</td>
+      <td>162804.0000000000</td>
+      <td>None</td>
+      <td>2576668.0000000000</td>
+      <td>None</td>
+      <td>2292707.0000000000</td>
+      <td>18296.0000000000</td>
+      <td>15194.0000000000</td>
+      <td>492.0000000000</td>
+      <td>63139605.0000000000</td>
+      <td>190640.0000000000</td>
+      <td>Americas</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>Albania</td>
-      <td>4880</td>
-      <td>144</td>
-      <td>2745</td>
-      <td>1991</td>
-      <td>117</td>
-      <td>6</td>
-      <td>63</td>
-      <td>2.95</td>
-      <td>56.25</td>
-      <td>5.25</td>
-      <td>4171</td>
-      <td>709</td>
-      <td>17.00</td>
-      <td>Europe</td>
+      <td>Brazil</td>
+      <td>South America</td>
+      <td>212710692.0000000000</td>
+      <td>2917562</td>
+      <td>None</td>
+      <td>98644.0000000000</td>
+      <td>None</td>
+      <td>2047660.0000000000</td>
+      <td>None</td>
+      <td>771258.0000000000</td>
+      <td>8318.0000000000</td>
+      <td>13716.0000000000</td>
+      <td>464.0000000000</td>
+      <td>13206188.0000000000</td>
+      <td>62085.0000000000</td>
+      <td>Americas</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>Algeria</td>
-      <td>27973</td>
-      <td>1163</td>
-      <td>18837</td>
-      <td>7973</td>
-      <td>616</td>
-      <td>8</td>
-      <td>749</td>
-      <td>4.16</td>
-      <td>67.34</td>
-      <td>6.17</td>
-      <td>23691</td>
-      <td>4282</td>
-      <td>18.07</td>
-      <td>Africa</td>
+      <td>India</td>
+      <td>Asia</td>
+      <td>1381344997.0000000000</td>
+      <td>2025409</td>
+      <td>None</td>
+      <td>41638.0000000000</td>
+      <td>None</td>
+      <td>1377384.0000000000</td>
+      <td>None</td>
+      <td>606387.0000000000</td>
+      <td>8944.0000000000</td>
+      <td>1466.0000000000</td>
+      <td>30.0000000000</td>
+      <td>22149351.0000000000</td>
+      <td>16035.0000000000</td>
+      <td>South-EastAsia</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>Andorra</td>
-      <td>907</td>
-      <td>52</td>
-      <td>803</td>
-      <td>52</td>
-      <td>10</td>
-      <td>0</td>
-      <td>0</td>
-      <td>5.73</td>
-      <td>88.53</td>
-      <td>6.48</td>
-      <td>884</td>
-      <td>23</td>
-      <td>2.60</td>
+      <td>Russia</td>
+      <td>Europe</td>
+      <td>145940924.0000000000</td>
+      <td>871894</td>
+      <td>None</td>
+      <td>14606.0000000000</td>
+      <td>None</td>
+      <td>676357.0000000000</td>
+      <td>None</td>
+      <td>180931.0000000000</td>
+      <td>2300.0000000000</td>
+      <td>5974.0000000000</td>
+      <td>100.0000000000</td>
+      <td>29716907.0000000000</td>
+      <td>203623.0000000000</td>
       <td>Europe</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>Angola</td>
-      <td>950</td>
-      <td>41</td>
-      <td>242</td>
-      <td>667</td>
-      <td>18</td>
-      <td>1</td>
-      <td>0</td>
-      <td>4.32</td>
-      <td>25.47</td>
-      <td>16.94</td>
-      <td>749</td>
-      <td>201</td>
-      <td>26.84</td>
+      <td>South Africa</td>
+      <td>Africa</td>
+      <td>59381566.0000000000</td>
+      <td>538184</td>
+      <td>None</td>
+      <td>9604.0000000000</td>
+      <td>None</td>
+      <td>387316.0000000000</td>
+      <td>None</td>
+      <td>141264.0000000000</td>
+      <td>539.0000000000</td>
+      <td>9063.0000000000</td>
+      <td>162.0000000000</td>
+      <td>3149807.0000000000</td>
+      <td>53044.0000000000</td>
       <td>Africa</td>
     </tr>
     <tr>
       <th>5</th>
-      <td>Antigua and Barbuda</td>
-      <td>86</td>
-      <td>3</td>
-      <td>65</td>
-      <td>18</td>
-      <td>4</td>
-      <td>0</td>
-      <td>5</td>
-      <td>3.49</td>
-      <td>75.58</td>
-      <td>4.62</td>
-      <td>76</td>
-      <td>10</td>
-      <td>13.16</td>
+      <td>Mexico</td>
+      <td>North America</td>
+      <td>129066160.0000000000</td>
+      <td>462690</td>
+      <td>6590.0000000000</td>
+      <td>50517.0000000000</td>
+      <td>819.0000000000</td>
+      <td>308848.0000000000</td>
+      <td>4140.0000000000</td>
+      <td>103325.0000000000</td>
+      <td>3987.0000000000</td>
+      <td>3585.0000000000</td>
+      <td>391.0000000000</td>
+      <td>1056915.0000000000</td>
+      <td>8189.0000000000</td>
       <td>Americas</td>
     </tr>
     <tr>
       <th>6</th>
-      <td>Argentina</td>
-      <td>167416</td>
-      <td>3059</td>
-      <td>72575</td>
-      <td>91782</td>
-      <td>4890</td>
-      <td>120</td>
-      <td>2057</td>
-      <td>1.83</td>
-      <td>43.35</td>
-      <td>4.21</td>
-      <td>130774</td>
-      <td>36642</td>
-      <td>28.02</td>
+      <td>Peru</td>
+      <td>South America</td>
+      <td>33016319.0000000000</td>
+      <td>455409</td>
+      <td>None</td>
+      <td>20424.0000000000</td>
+      <td>None</td>
+      <td>310337.0000000000</td>
+      <td>None</td>
+      <td>124648.0000000000</td>
+      <td>1426.0000000000</td>
+      <td>13793.0000000000</td>
+      <td>619.0000000000</td>
+      <td>2493429.0000000000</td>
+      <td>75521.0000000000</td>
       <td>Americas</td>
     </tr>
     <tr>
       <th>7</th>
-      <td>Armenia</td>
-      <td>37390</td>
-      <td>711</td>
-      <td>26665</td>
-      <td>10014</td>
-      <td>73</td>
-      <td>6</td>
-      <td>187</td>
-      <td>1.90</td>
-      <td>71.32</td>
-      <td>2.67</td>
-      <td>34981</td>
-      <td>2409</td>
-      <td>6.89</td>
-      <td>Europe</td>
+      <td>Chile</td>
+      <td>South America</td>
+      <td>19132514.0000000000</td>
+      <td>366671</td>
+      <td>None</td>
+      <td>9889.0000000000</td>
+      <td>None</td>
+      <td>340168.0000000000</td>
+      <td>None</td>
+      <td>16614.0000000000</td>
+      <td>1358.0000000000</td>
+      <td>19165.0000000000</td>
+      <td>517.0000000000</td>
+      <td>1760615.0000000000</td>
+      <td>92022.0000000000</td>
+      <td>Americas</td>
     </tr>
     <tr>
       <th>8</th>
-      <td>Australia</td>
-      <td>15303</td>
-      <td>167</td>
-      <td>9311</td>
-      <td>5825</td>
-      <td>368</td>
-      <td>6</td>
-      <td>137</td>
-      <td>1.09</td>
-      <td>60.84</td>
-      <td>1.79</td>
-      <td>12428</td>
-      <td>2875</td>
-      <td>23.13</td>
-      <td>Western Pacific</td>
+      <td>Colombia</td>
+      <td>South America</td>
+      <td>50936262.0000000000</td>
+      <td>357710</td>
+      <td>None</td>
+      <td>11939.0000000000</td>
+      <td>None</td>
+      <td>192355.0000000000</td>
+      <td>None</td>
+      <td>153416.0000000000</td>
+      <td>1493.0000000000</td>
+      <td>7023.0000000000</td>
+      <td>234.0000000000</td>
+      <td>1801835.0000000000</td>
+      <td>35374.0000000000</td>
+      <td>Americas</td>
     </tr>
     <tr>
       <th>9</th>
-      <td>Austria</td>
-      <td>20558</td>
-      <td>713</td>
-      <td>18246</td>
-      <td>1599</td>
-      <td>86</td>
-      <td>1</td>
-      <td>37</td>
-      <td>3.47</td>
-      <td>88.75</td>
-      <td>3.91</td>
-      <td>19743</td>
-      <td>815</td>
-      <td>4.13</td>
+      <td>Spain</td>
+      <td>Europe</td>
+      <td>46756648.0000000000</td>
+      <td>354530</td>
+      <td>None</td>
+      <td>28500.0000000000</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>617.0000000000</td>
+      <td>7582.0000000000</td>
+      <td>610.0000000000</td>
+      <td>7064329.0000000000</td>
+      <td>151087.0000000000</td>
       <td>Europe</td>
     </tr>
   </tbody>
